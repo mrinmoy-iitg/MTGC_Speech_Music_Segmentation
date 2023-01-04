@@ -223,6 +223,8 @@ def print_cv_info(cv_file_list, classes, opDir, CV):
 
 
 if __name__ == '__main__':
+    # folder = '/media/mrinmoy/NTFS_Volume/Phd_Work/Data/EmoGDB/' #Laptop
+    # folder = '/home/phd/mrinmoy.bhattacharjee/data/movie-trailers-dataset-master/' # EEE-GPU
     folder = '/media/mrinmoy/NTFS_Volume/Phd_Work/Data/Moviescope/' # LabPC
     classes = {0:'wav'}
     CV = 3

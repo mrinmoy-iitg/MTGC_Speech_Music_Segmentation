@@ -11,7 +11,7 @@ import numpy as np
 from sklearn.metrics import precision_recall_curve, auc, average_precision_score
 import os
 import datetime
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 
 
@@ -48,47 +48,81 @@ def print_results(PARAMS, fold, suffix, **kwargs):
 if __name__ == '__main__':
     PARAMS = {
             'today': datetime.datetime.now().strftime("%Y-%m-%d"),
-            'dataset_name': 'Moviescope',
-            'method1': 'LMS',
-            'method1_path': './results/Moviescope/Best/Proposed_2DCNN_Attention/Attention_LMS/',
-            'method2': 'CBoW_SMPred_Stats',
-            'method2_path': './results/Moviescope/Best/Proposed_2DCNN_Attention/Attention_CBoW_SMPred_Stats/',
-            'genre_list': {'Action':1, 'Fantasy':1, 'Sci-Fi':2, 'Thriller':3, 'Romance':4, 'Animation':5, 'Comedy':6, 'Family':7, 'Mystery':8, 'Drama':9, 'Crime': 10, 'Horror':11, 'Biography':12},
+            # 'dataset_name': 'Moviescope',
+            # # 'method1': 'Cascante_et_al',
+            # # 'method1_path': './results/Moviescope/Best/Cascante_et_al_arXiv_2019/',
+            # 'method1': 'LMS',
+            # 'method1_path': './results/Moviescope/Best/Proposed_2DCNN_Attention/Attention_LMS/',
+            # # 'method1': 'Sharma_et_al',
+            # # 'method1_path': './results/Moviescope/Best/Sharma_et_al_ECSI_2021_13genres',
+            # # 'method1': 'CBoW',
+            # # 'method1_path': './results/Moviescope/2022-02-01/Attention_CBoW_STL/',
+            # 'method2': 'CBoW_SMPred_Stats',
+            # 'method2_path': './results/Moviescope/Best/Proposed_2DCNN_Attention/Attention_CBoW_SMPred_Stats/',
+            # # 'method2': 'Stats',
+            # # 'method2_path': './results/Moviescope/2022-02-01/Attention_Stats_STL/',
+            # 'genre_list': {'Action':1, 'Fantasy':1, 'Sci-Fi':2, 'Thriller':3, 'Romance':4, 'Animation':5, 'Comedy':6, 'Family':7, 'Mystery':8, 'Drama':9, 'Crime': 10, 'Horror':11, 'Biography':12},
             
-            # 'dataset_name': 'EmoGDB',
-            # 'method1': 'CBoW_SMPred_Stats',
-            # 'method1_path': './results/EmoGDB/Cross_Dataset_Performance/Attention_CBoW_SMPred_Stats_STL_30s_proposed/', # CBoW+SMPred+Stats
-            # 'method2': 'LMS',
-            # 'method2_path': './results/EmoGDB/Cross_Dataset_Performance/Attention_LMS_STL_30s_proposed/', # LMS
-            # # 'genre_list': {'Action':0, 'Thriller':1, 'Romance':2, 'Comedy':3, 'Drama':4, 'Horror':5},
-            # 'genre_list':{'Comedy': 0, 'Horror': 1, 'Romance': 2, 'Action': 3, 'Thriller': 4, 'Drama': 5},
+            'dataset_name': 'EmoGDB',
+            # 'method1': 'Cascante_et_al',
+            # 'method1_path': './results/EmoGDB/Cross_Dataset_Performance/Cascante_et_al_STL_30s_baseline/',
+            'method1': 'LMS',
+            'method1_path': './results/EmoGDB/Cross_Dataset_Performance/Attention_LMS_STL_30s_proposed/', # LMS
+            'method2': 'CBoW_SMPred_Stats',
+            'method2_path': './results/EmoGDB/Cross_Dataset_Performance/Attention_CBoW_SMPred_Stats_STL_30s_proposed/', # CBoW+SMPred+Stats
+            # 'method2': 'CBoW_SMPred_Stats_LMS',
+            # 'method2_path': './results/EmoGDB/Cross_Dataset_Performance/Attention_CBoW_SMPred_Stats_LMS_STL_30s_proposed/', # CBoW+SMPred+Stats+LMS Intermediate Fusion
+            # 'genre_list': {'Action':0, 'Thriller':1, 'Romance':2, 'Comedy':3, 'Drama':4, 'Horror':5},
+            'genre_list':{'Comedy': 0, 'Horror': 1, 'Romance': 2, 'Action': 3, 'Thriller': 4, 'Drama': 5},
             }
     PARAMS['opDir'] = './results/' + PARAMS['dataset_name'] + '/' + PARAMS['today'] + '/CrossDataset_Ensemble_' + PARAMS['method1'] + '_' + PARAMS['method2'] + '/'
     if not os.path.exists(PARAMS['opDir']):
         os.makedirs(PARAMS['opDir'])
     misc.print_configuration(PARAMS)
 
-    Test_Params_Baseline = misc.load_obj(PARAMS['method1_path'], 'Test_Params_fold0')
-    # Predictions_Baseline = Test_Params_Baseline['Predictions']
-    # test_label = Test_Params_Baseline['test_label']
-    Predictions_Baseline = Test_Params_Baseline['Trailer_Metrics']['Prediction']
+    # Moviescope
+    # Test_Params_Baseline = misc.load_obj(PARAMS['method1_path'], 'Test_Params_fold0')
+    # # Predictions_Baseline = Test_Params_Baseline['Predictions']
+    # # Predictions_Baseline = StandardScaler().fit_transform(Predictions_Baseline)
+    # # test_label = Test_Params_Baseline['test_label']
+    # Predictions_Baseline = Test_Params_Baseline['Trailer_Metrics']['Prediction']
     # Predictions_Baseline = StandardScaler().fit_transform(Predictions_Baseline)
+    # test_label = Test_Params_Baseline['Trailer_Metrics']['Groundtruth']
+    
+    # EmoGDB
+    Test_Params_Baseline = misc.load_obj(PARAMS['method1_path'], 'Test_Params_fold0')
+    Predictions_Baseline = Test_Params_Baseline['Trailer_Metrics']['Prediction'] # LMS
+    # # Predictions_Baseline = StandardScaler().fit_transform(Predictions_Baseline)
+    # Predictions_Baseline = MinMaxScaler().fit_transform(Predictions_Baseline)
     test_label = Test_Params_Baseline['Trailer_Metrics']['Groundtruth']
+    # Predictions_Baseline = Test_Params_Baseline['Trailer_Metrics']['Predictions'] # Cascante
+    # # Predictions_Baseline = StandardScaler().fit_transform(Predictions_Baseline)
+    # Predictions_Baseline = MinMaxScaler().fit_transform(Predictions_Baseline)
+    # test_label = Test_Params_Baseline['Trailer_Metrics']['test_label']
     
     Test_Params_Proposed = misc.load_obj(PARAMS['method2_path'], 'Test_Params_fold0')
     Predictions_Proposed = Test_Params_Proposed['Trailer_Metrics']['Prediction']
-    # Predictions_Proposed = StandardScaler().fit_transform(Predictions_Proposed)
+    # # Predictions_Proposed = StandardScaler().fit_transform(Predictions_Proposed)
+    # Predictions_Proposed = MinMaxScaler().fit_transform(Predictions_Proposed)
     # test_label = Test_Params_Proposed['Trailer_Metrics']['Groundtruth']
+    
+    All_Pred = np.append(Predictions_Baseline, Predictions_Proposed, axis=0)
+    scaler = MinMaxScaler().fit(All_Pred)
+    Predictions_Baseline = scaler.transform(Predictions_Baseline)
+    Predictions_Proposed = scaler.transform(Predictions_Proposed)
+    
 
     best_perf = [0,0,0]
     best_alpha = 0
     Trailer_Metrics = {'P_curve':{}, 'R_curve':{}, 'AUC':{}, 'average_precision':{}, 'Precision':{}, 'Recall':{}, 'F1_score':{}}
-    for alpha  in np.arange(0.0, 1.01, 0.01):
+    for alpha in np.arange(0.0, 1.01, 0.01):
         alpha = np.round(alpha, 2)
         print('\nalpha=', alpha)
         Predictions = None
         Predictions = np.add(alpha*Predictions_Baseline, (1-alpha)*Predictions_Proposed)
         # Predictions = np.multiply(Predictions_Baseline**alpha, Predictions_Proposed**(1-alpha))
+
+        # Predictions = StandardScaler().fit_transform(Predictions)
         
         # print('Trailer_pred: ', np.shape(Predictions), np.shape(test_label))
         macro_avg_auc = 0

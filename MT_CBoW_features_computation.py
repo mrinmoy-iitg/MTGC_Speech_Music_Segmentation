@@ -203,11 +203,28 @@ def __init__():
         'silThresh': 0.0,  # Silence Threshold
         'intervalSize': 1000, # In miliseconds
         'intervalShift': 1000, # In miliseconds
-        'dataset_name': 'Moviescope',
-        'audio_path': '/media/mrinmoy/NTFS_Volume/Phd_Work/Data/Moviescope/', 
-        'gmmPath_ASPT': '/home/mrinmoy/Documents/PhD_Work/Features/MTGC_SMO/musan/1000ms_10ms_5ms_10PT/CBoW-ASPT_mix5/__GMMs/',
-        'gmmPath_LSPT': '/home/mrinmoy/Documents/PhD_Work/Features/MTGC_SMO/musan/1000ms_10ms_5ms_10PT/CBoW-LSPT_mix5/__GMMs/',
-        'output_path': '/home/mrinmoy/Documents/PhD_Work/Features/MTGC_SMO/',        
+        
+        # Laptop
+        'dataset_name': 'EmoGDB',
+        'audio_path': '/media/mrinmoy/NTFS_Volume/Phd_Work/Data/EmoGDB/', 
+        'gmmPath_ASPT': './features/musan/1000ms_10ms_5ms_10PT/CBoW-ASPT_mix5/__GMMs/',
+        'gmmPath_LSPT': './features/musan/1000ms_10ms_5ms_10PT/CBoW-LSPT_mix5/__GMMs/',
+        'output_path': './features/',
+
+        # LabPC
+        # 'dataset_name': 'movie-trailers-dataset-master',
+        # 'audio_path': '/media/mrinmoy/NTFS_Volume/Phd_Work/Data/movie-trailers-dataset-master/',
+        # 'gmmPath_ASPT': '/home/mrinmoy/Documents/PhD_Work/Features/MTGC_SMO/musan/1000ms_10ms_5ms_10PT/CBoW-ASPT_mix5/__GMMs/',
+        # 'gmmPath_LSPT': '/home/mrinmoy/Documents/PhD_Work/Features/MTGC_SMO/musan/1000ms_10ms_5ms_10PT/CBoW-LSPT_mix5/__GMMs/',
+        # 'output_path': '/home/mrinmoy/Documents/PhD_Work/Features/MTGC_SMO/',
+
+        # LabPC
+        # 'dataset_name': 'Moviescope',
+        # 'audio_path': '/media/mrinmoy/NTFS_Volume/Phd_Work/Data/Moviescope/', 
+        # 'gmmPath_ASPT': '/home/mrinmoy/Documents/PhD_Work/Features/MTGC_SMO/musan/1000ms_10ms_5ms_10PT/CBoW-ASPT_mix5/__GMMs/',
+        # 'gmmPath_LSPT': '/home/mrinmoy/Documents/PhD_Work/Features/MTGC_SMO/musan/1000ms_10ms_5ms_10PT/CBoW-LSPT_mix5/__GMMs/',
+        # 'output_path': '/home/mrinmoy/Documents/PhD_Work/Features/MTGC_SMO/',
+                
         'today': datetime.datetime.now().strftime("%Y-%m-%d"),
         'classes':{0:'music', 1:'speech'},
         'SM_classifier_fold': 0,

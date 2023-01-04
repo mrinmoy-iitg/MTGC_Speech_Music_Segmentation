@@ -55,6 +55,7 @@ from sklearn.metrics import precision_recall_curve, auc, average_precision_score
 import sys
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from lib.pyAudioAnalysis import ShortTermFeatures as aF
+from lib.pyAudioAnalysis import audioBasicIO as aIO 
 from sklearn.cluster import KMeans
 from sklearn.metrics import pairwise_distances
 import librosa
@@ -91,17 +92,21 @@ def AFA_net_model(output_dim):
     
     x = Dense(256, input_dim=(78,))(input_layer)
     x = BatchNormalization(axis=-1)(x)
+    # x = Activation('relu')(x)
 
     x = Dense(256)(x)
     x = BatchNormalization(axis=-1)(x)
+    # x = Activation('relu')(x)
 
     x = Dropout(0.4)(x)
 
     x = Dense(64)(x)
     x = BatchNormalization(axis=-1)(x)
+    # x = Activation('relu')(x)
 
     x = Dense(32)(x)
     x = BatchNormalization(axis=-1)(x)
+    # x = Activation('relu')(x)
 
     x = Dropout(0.2)(x)
 
@@ -133,6 +138,20 @@ def train_model(PARAMS, data_dict, model, weightFile, logFile):
     val_data = data_dict['val_data']
     val_label = data_dict['val_label']
     
+    ''' Data augmentation real:synthetic::1:2 -- added 02-Jan-22'''
+    # train_data_orig = train_data.copy()
+    # train_label_orig = train_label.copy()
+    # for num_augment in range(2):
+    #     noisy_data = np.add(train_data_orig, np.random.normal(loc=0.0, scale=1e-5, size=np.shape(train_data_orig)))
+    #     train_data = np.append(train_data, noisy_data, axis=0)
+    #     noisy_labels = np.multiply(train_label_orig, np.array(np.random.rand(np.shape(train_label_orig)[0],np.shape(train_label_orig)[1])<0.95, dtype=int))
+    #     train_label = np.append(train_label, noisy_labels, axis=0)
+    # shuffle_idx = list(range(np.shape(train_data)[0]))
+    # np.random.shuffle(shuffle_idx)
+    # train_data = train_data[shuffle_idx,:]
+    # train_label = train_label[shuffle_idx,:]    
+    # print('train data: ', np.shape(train_data_orig), np.shape(train_data), np.shape(train_label))
+    
     print('train data: ', np.shape(train_data), np.shape(train_label))
     print('genre_list: ', PARAMS['genre_list'])
         
@@ -145,6 +164,7 @@ def train_model(PARAMS, data_dict, model, weightFile, logFile):
         validation_data=(val_data, val_label),
         callbacks=[csv_logger, mcp, reduce_lr],
         shuffle=True,
+        # class_weight=PARAMS['genre_weights'],
         )
         
     trainingTimeTaken = time.process_time() - start
@@ -185,6 +205,8 @@ def perform_training(PARAMS, data_dict):
             np.savez(paramFile, lr=str(learning_rate), TTT=str(trainingTimeTaken))
 
     trainingTimeTaken = float(np.load(paramFile)['TTT'])
+    # with open(architechtureFile, 'r') as f:
+    #     model = model_from_json(f.read())
     model, learning_rate = AFA_net_model(len(PARAMS['genre_list']))
     model.load_weights(weightFile)
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[AUC(curve='PR')])
@@ -309,6 +331,9 @@ def get_train_test_files(PARAMS):
 
 
 def compute_features(PARAMS, fName):
+    # fs, Xin = aIO.read_audio_file(PARAMS['audio_path']+'/'+fName.split('/')[-1])
+    # Xin = aIO.stereo_to_mono(Xin)
+    # print('Xin: ', np.shape(Xin))
     Xin, fs = librosa.load(PARAMS['audio_path']+'/'+fName.split('/')[-1], mono=True, sr=None)
     duration = np.round(len(Xin) / float(fs),2)
     print(fName, ' Xin: ', np.shape(Xin), ' fs=', fs, f'duration = {duration} seconds')
@@ -397,11 +422,62 @@ def load_data_from_files(PARAMS, file_type):
                 if kmeans_file_count==400:
                     break
             print('kmeans data: ', np.shape(kmeans_data))
+            
+            # files = np.setdiff1d(files, kmeans_files)
+            # train_data = np.empty([])
+            # for fl in files:
+            #     feat_fName = PARAMS['feature_opDir'] + '/' + fl.split('.')[0] + '.npy'
+            #     if not fl.split('.')[0] in PARAMS['annotations'].keys():
+            #         print(feat_fName, ' not present in annotations')
+            #         continue
+            #     if not os.path.exists(PARAMS['audio_path']+'/'+fl.split('/')[-1]):
+            #         print(feat_fName, ' wav file not present')
+            #         continue    
+            #     lab = np.zeros(len(PARAMS['genre_list']))
+            #     # print(fl, np.shape(fv), np.shape(lab))
+            #     for genre_i in PARAMS['genre_list'].keys():
+            #         if genre_i in PARAMS['annotations'][fl.split('.')[0]]['genre']:
+            #             lab[PARAMS['genre_list'][genre_i]] = 1
+            #             genre_freq[genre_i] += 1
+                
+            #     # To ignore trailers with no genre annotations
+            #     if np.sum(lab)==0:
+            #         continue
+                
+            #     # startTime = time.process_time()
+            #     if not os.path.exists(feat_fName):
+            #         fv = compute_features(PARAMS, fl)
+            #         np.save(feat_fName, fv)
+            #         # print('feat computation time: ', time.process_time()-startTime)
+            #     else:
+            #         fv = np.load(feat_fName)
+            #         # print('feat loading time: ', time.process_time()-startTime)
+        
+            #     fv[fv==-np.inf] = 0
+            #     fv[fv==np.inf] = 0
+            #     fv[fv==np.NAN] = 0
+        
+            #     if np.size(train_data)<=1:
+            #         train_data = fv
+            #     else:
+            #         train_data = np.append(train_data, fv, axis=0)
+            # print('train data: ', np.shape(train_data))    
+            
+            # all_data = np.append(train_data, kmeans_data, axis=0)
+            # std_scaler = StandardScaler().fit(all_data)
+            # kmeans_data = std_scaler.transform(kmeans_data)
+            # # minmax_scaler = MinMaxScaler().fit(all_data)
+            # # kmeans_data = minmax_scaler.transform(kmeans_data)
+            
             kmeans_model = KMeans(n_clusters=PARAMS['kmeans_nClusters'], verbose=1)
             kmeans_model.fit(kmeans_data)
+            # misc.save_obj({'kmeans_model':kmeans_model, 'std_scaler':std_scaler, 'train_files':files, 'genre_freq':genre_freq}, PARAMS['opDir'], 'kmeans_model_fold' + str(PARAMS['fold']))
+            # misc.save_obj({'kmeans_model':kmeans_model, 'minmax_scaler':minmax_scaler, 'train_files':files, 'genre_freq':genre_freq}, PARAMS['opDir'], 'kmeans_model_fold' + str(PARAMS['fold']))
             misc.save_obj({'kmeans_model':kmeans_model, 'train_files':files, 'genre_freq':genre_freq}, PARAMS['opDir'], 'kmeans_model_fold' + str(PARAMS['fold']))
 
     kmeans_model = misc.load_obj(PARAMS['opDir'], 'kmeans_model_fold' + str(PARAMS['fold']))['kmeans_model']
+    # std_scaler = misc.load_obj(PARAMS['opDir'], 'kmeans_model_fold' + str(PARAMS['fold']))['std_scaler']
+    # minmax_scaler = misc.load_obj(PARAMS['opDir'], 'kmeans_model_fold' + str(PARAMS['fold']))['minmax_scaler']
     train_files = misc.load_obj(PARAMS['opDir'], 'kmeans_model_fold' + str(PARAMS['fold']))['train_files']
     genre_freq = misc.load_obj(PARAMS['opDir'], 'kmeans_model_fold' + str(PARAMS['fold']))['genre_freq']
     
@@ -426,7 +502,12 @@ def load_data_from_files(PARAMS, file_type):
         fv[fv==np.inf] = 0
         fv[fv==np.NAN] = 0
         
+        # fv = std_scaler.transform(fv)
+        # fv = minmax_scaler.transform(fv)
+        
         dist = pairwise_distances(fv, centroids)
+        # print(np.round(dist,2))
+        # print(centroids)
         inv_dist = np.divide(1,dist+1e-10)
         fv = np.append(fv, inv_dist, axis=1)
         lab = np.zeros(len(PARAMS['genre_list']))
@@ -461,18 +542,23 @@ def get_data(PARAMS):
     train_data, train_label, genre_freq_train = load_data_from_files(PARAMS, file_type='train')
     std_scaler = StandardScaler().fit(train_data)
     train_data = std_scaler.transform(train_data)
+    # min_max_scaler = MinMaxScaler().fit(train_data)
+    # train_data = min_max_scaler.transform(train_data)
     print('train data loaded: ', np.shape(train_data), np.shape(train_label))
 
     val_data, val_label, genre_freq_val = load_data_from_files(PARAMS, file_type='val')
     val_data = std_scaler.transform(val_data)
+    # val_data = min_max_scaler.transform(val_data)
     print('val data loaded: ', np.shape(val_data), np.shape(val_label))
     
     test_data, test_label, genre_freq_test = load_data_from_files(PARAMS, file_type='test')
     test_data = std_scaler.transform(test_data)
+    # test_data = min_max_scaler.transform(test_data)
     print('test data loaded: ', np.shape(test_data), np.shape(test_label))
     
     data_dict = {}
     data_dict['std_scaler'] = std_scaler
+    # data_dict['min_max_scaler'] = min_max_scaler
     data_dict['train_data'] = train_data
     data_dict['train_label'] = train_label
     data_dict['val_data'] = val_data
@@ -513,11 +599,44 @@ def print_results(PARAMS, fold, **kwargs):
 
 def __init__():
     PARAMS = {
-            'today': datetime.datetime.now().strftime("%Y-%m-%d"),            
+            'today': datetime.datetime.now().strftime("%Y-%m-%d"),
+            
+            # Laptop
+            # 'dataset_name': 'EmoGDB',
+            # 'feature_path': './features/',
+            # 'audio_path': '/media/mrinmoy/NTFS_Volume/Phd_Work/Data/EmoGDB/wav/',
+            # 'annot_path': '/media/mrinmoy/NTFS_Volume/Phd_Work/Data/EmoGDB/Annotations_6genre.csv',
+
+            # EEE-GPU
+            # 'dataset_name': 'EmoGDB',
+            # 'feature_path':'/home1/PhD/mrinmoy.bhattacharjee/MTGC_SMO/',
+            # 'audio_path':'/home/phd/mrinmoy.bhattacharjee/data/EmoGDB/wav/',
+            # 'annot_path':'/home/phd/mrinmoy.bhattacharjee/data/EmoGDB/Annotations_6genre.csv',
+
+            # EEE-GPU
+            # 'dataset_name': 'movie-trailers-dataset-master',
+            # 'feature_path':'/home1/PhD/mrinmoy.bhattacharjee/MTGC_SMO/',
+            # 'audio_path':'/home/phd/mrinmoy.bhattacharjee/data/movie-trailers-dataset-master/wav/',
+            # 'annot_path':'/home/phd/mrinmoy.bhattacharjee/data/movie-trailers-dataset-master/Annotations.csv',
+
+            # EEE-GPU
             'dataset_name': 'Moviescope',
             'feature_path':'/home1/PhD/mrinmoy.bhattacharjee/MTGC_SMO/',
             'audio_path':'/home1/PhD/mrinmoy.bhattacharjee/data/Moviescope/wav/',
             'annot_path':'/home1/PhD/mrinmoy.bhattacharjee/data/Moviescope/Original_Metadata.csv',
+            
+            # LabPC
+            # 'dataset_name': 'Moviescope',
+            # 'feature_path': '/home/mrinmoy/Documents/PhD_Work/Features/MTGC_SMO/',
+            # 'audio_path': '/media/mrinmoy/NTFS_Volume/Phd_Work/Data/Moviescope/wav/',
+            # 'annot_path': '/media/mrinmoy/NTFS_Volume/Phd_Work/Data/Moviescope/Annotations_13genres.csv',
+            
+            # LabPC
+            # 'dataset_name': 'movie-trailers-dataset-master',
+            # 'feature_path': '/home/mrinmoy/Documents/PhD_Work/Features/MTGC_SMO/',
+            # 'audio_path': '/media/mrinmoy/Windows_Volume/PhD_Work/data/movie-trailers-dataset-master/wav/',
+            # 'annot_path': '/media/mrinmoy/Windows_Volume/PhD_Work/data/movie-trailers-dataset-master/Annotations_6genre.csv',
+
             'CV_folds': 3,
             'fold': 0,
             'save_flag': True,
@@ -531,6 +650,9 @@ def __init__():
             'Tw': 50, # frame size in ms
             'Ts': 25, # frame shift in ms
             'kmeans_nClusters': 10,
+            # 'possible_genres': ['Action', 'Fantasy', 'Sci-Fi', 'Thriller', 'Romance', 'Family', 'Mystery', 'Comedy', 'Drama', 'Animation', 'Crime', 'Horror', 'Biography', 'Adventure', 'Music', 'War', 'History', 'Sport', 'Musical', 'Documentary', 'Western', 'Film-Noir', 'Short', 'News', 'Reality-TV', 'Game-Show'], # Moviescope all
+            # 'possible_genres': ['Action', 'Sci-Fi', 'Romance', 'Comedy', 'Horror'], # Sharma et al. 5
+            # 'possible_genres': ['Action', 'Comedy', 'Drama', 'Horror', 'Romance', 'Thriller'], # 6 genres EmoGDB
             'possible_genres': ['Action', 'Animation', 'Biography', 'Comedy', 'Crime', 'Drama', 'Family', 'Fantasy', 'Horror', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller'], # Moviescope 13
             }
 
@@ -546,6 +668,13 @@ def __init__():
         classname = PARAMS['classes'][clNum]
         DT_SZ += PARAMS['cv_file_list']['total_duration'][classname] # in Hours
     DT_SZ *= 3600*1000 # in msec
+    # tr_frac = ((PARAMS['CV_folds']-1)/PARAMS['CV_folds'])*0.7
+    # vl_frac = ((PARAMS['CV_folds']-1)/PARAMS['CV_folds'])*0.3
+    # ts_frac = (1/PARAMS['CV_folds'])
+    # PARAMS['TR_STEPS'] = int(np.floor(DT_SZ/PARAMS['W_shift'])*tr_frac/(n_classes*PARAMS['batch_size']))
+    # PARAMS['V_STEPS'] = int(np.floor(DT_SZ/PARAMS['W_shift'])*vl_frac/(n_classes*PARAMS['batch_size']))
+    # PARAMS['TS_STEPS'] = int(np.floor(DT_SZ/PARAMS['W_shift'])*ts_frac/(n_classes*PARAMS['batch_size']))
+    # print('TR_STEPS: %d, \tV_STEPS: %d, \tTS_STEPS: %d\n'%(PARAMS['TR_STEPS'], PARAMS['V_STEPS'], PARAMS['TS_STEPS']))
 
     nTrain = len(PARAMS['cv_file_list']['original_splits']['train'])
     nVal = len(PARAMS['cv_file_list']['original_splits']['val'])
@@ -591,6 +720,11 @@ if __name__ == '__main__':
     all_fold_rec = {genre_i:[] for genre_i in PARAMS['genre_list'].keys()}
     all_fold_fscore = {genre_i:[] for genre_i in PARAMS['genre_list'].keys()}
 
+    # for PARAMS['fold'] in range(PARAMS['CV_folds']):
+    #     PARAMS['train_files'], PARAMS['test_files'] = get_train_test_files(PARAMS)
+    #     print('train_files: ', PARAMS['train_files'])
+    #     print('test_files: ', PARAMS['test_files'])
+
     for PARAMS['fold'] in range(1): # Original split
         PARAMS['train_files'] = {'wav':PARAMS['cv_file_list']['original_splits']['train']}
         PARAMS['val_files'] = {'wav':PARAMS['cv_file_list']['original_splits']['val']}
@@ -617,6 +751,10 @@ if __name__ == '__main__':
             lab = PARAMS['genre_list'][genre_i]
             PARAMS['genre_weights'][lab] = max_freq/PARAMS['genre_freq'][genre_i]
         
+        # import sys
+        # sys.exit(0)
+        # continue
+            
         PARAMS['modelName'] = PARAMS['opDir'] + '/fold' + str(PARAMS['fold']) + '_model.xyz'
         Train_Params = perform_training(PARAMS, data_dict)
 
@@ -626,7 +764,9 @@ if __name__ == '__main__':
         else:
             Test_Params = misc.load_obj(PARAMS['opDir'], 'Test_Params_fold'+str(PARAMS['fold']))
         
+        # print('Test keys: ', Test_Params['AUC'].keys())
         for genre_i in PARAMS['genre_list'].keys():
+            # print(genre_i, 'AUC=', Test_Params['AUC'][genre_i])
             kwargs = {
                 '0':'genre:'+genre_i,
                 '1':'AUC (micro-avg):'+str(Test_Params['AUC']['micro_avg']),
@@ -662,6 +802,7 @@ if __name__ == '__main__':
             reset_TF_session()
         
     for genre_i in PARAMS['genre_list'].keys():
+        # print(genre_i, 'AUC=', all_fold_auc_micro_avg, len(all_fold_auc_micro_avg))
         if len(all_fold_auc_micro_avg)<PARAMS['CV_folds']:
             continue
         kwargs = {
@@ -680,3 +821,4 @@ if __name__ == '__main__':
             }
         print_results(PARAMS, 'avg',  **kwargs)
         
+    

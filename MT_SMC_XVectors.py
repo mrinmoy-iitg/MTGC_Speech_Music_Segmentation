@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Nov 18 21:19:09 2021
+Created on Sat Jul 16 22:43:34 2022
 
 @author: Mrinmoy Bhattacharjee, PhD Scholar, EEE Dept., IIT Guwahati
 """
@@ -15,7 +15,6 @@ from tensorflow.keras.models import model_from_json
 # from tensorflow.keras.initializers import he_uniform
 import tensorflow as tf
 import librosa
-import csv
 import matplotlib.pyplot as plt
 
 
@@ -129,17 +128,23 @@ def __init__():
             # 'annot_path': '/media/mrinmoy/NTFS_Volume/Phd_Work/Data/movie-trailers-dataset-master/Annotations.csv',
 
             # LabPC
-            'dataset_name': 'Moviescope',
-            'path': '/home/mrinmoy/Documents/PhD_Work/Features/MTGC_SMO/Moviescope/1s_1s_10ms_5ms_10PT_2022-01-21/',
-            'model_folder': './results/musan/CBoW-ASPT-LSPT_mix5/',
-            'annot_path': '/media/mrinmoy/NTFS_Volume/Phd_Work/Data/Moviescope/Original_Metadata.csv',
+            # 'dataset_name': 'Moviescope',
+            # 'path': '/home/mrinmoy/Documents/PhD_Work/Features/MTGC_SMO/Moviescope/1s_1s_10ms_5ms_10PT_2022-01-21/',
+            # 'model_folder': './results/musan/CBoW-ASPT-LSPT_mix5/',
+            # 'annot_path': '/media/mrinmoy/NTFS_Volume/Phd_Work/Data/Moviescope/Original_Metadata.csv',
 
-            'featName': 'CBoW-ASPT-LSPT',
+            # EEE-GPU
+            'dataset_name': 'Moviescope',
+            'path': '/home1/PhD/mrinmoy.bhattacharjee/MTGC_SMO/Moviescope/X-Vectors/',
+            'model_folder': './results/musan/X-Vectors/',
+            'annot_path': '/home1/PhD/mrinmoy.bhattacharjee/data/Moviescope/Original_Metadata.csv',
+
+            'featName': 'X-Vectors', # 'CBoW-ASPT-LSPT',
             'SM_classifier_fold': 0,
             'CV_folds': 3,
             'fold': 0,
             'save_flag': True,
-            'use_GPU': False,
+            'use_GPU': True,
             'GPU_session':None,
             'classes':{0:'music', 1:'speech'},
             'high_confidence_thresh': 0.85,
@@ -159,7 +164,7 @@ if __name__ == '__main__':
     if not os.path.exists(PARAMS['opDir']):
         os.makedirs(PARAMS['opDir'])
         
-    PARAMS['feature_folder'] = PARAMS['path'] + '/' + PARAMS['featName'] + '/'
+    PARAMS['feature_folder'] = PARAMS['path'] + '/wav/'
 
     if PARAMS['use_GPU']:
         PARAMS['GPU_session'] = start_GPU_session()
@@ -171,6 +176,9 @@ if __name__ == '__main__':
     SM_Pred = {}
     files = librosa.util.find_files(PARAMS['feature_folder'], ext=['npy'])
     for fl in files:
+        if not os.path.exists(fl):
+            print(f'{fl} does not exists')
+            continue
         opt_fName = PARAMS['opDir'] + '/' + fl.split('/')[-1].split('.')[0] + '.npy'
         if not os.path.exists(opt_fName):
             fv = np.load(fl)
@@ -186,20 +194,28 @@ if __name__ == '__main__':
     annotations, genre_list = misc.get_annotations(PARAMS['annot_path'], PARAMS['possible_genres'])
     genre_sp_mu_dist = {}
     audio_type_total = [0,0,0]
-    for annot_i in annotations.keys():
+    for annot_i in SM_Pred.keys():
         if not os.path.exists(PARAMS['feature_folder']+'/'+annot_i+'.npy'):
             continue
+        print(f'SM_Pred={SM_Pred[annot_i].shape}')
         pred = SM_Pred[annot_i].flatten()
         sp_seg = np.sum(pred>=PARAMS['high_confidence_thresh'])
         mu_seg = np.sum(pred<=(1-PARAMS['high_confidence_thresh']))
         ot_seg = len(pred)-sp_seg-mu_seg
-        for genre_i in genre_list.keys():
-            if not genre_i in genre_sp_mu_dist:
+        print(f'{annot_i} {[mu_seg, sp_seg, ot_seg]}')
+        genres = annotations[annot_i]['genre']
+        print(f'genres={genres}')
+        # for genre_i in genre_list.keys():
+        for genre_i in genres:
+            if genre_i not in genre_sp_mu_dist.keys():
                 genre_sp_mu_dist[genre_i] = [mu_seg, sp_seg, ot_seg]
             else:
                 genre_sp_mu_dist[genre_i] = np.add(genre_sp_mu_dist[genre_i], [mu_seg, sp_seg, ot_seg])
-            audio_type_total = np.add(audio_type_total, [mu_seg, sp_seg, ot_seg])
+        audio_type_total = np.add(audio_type_total, [mu_seg, sp_seg, ot_seg])
     
+    print(f'audio_type_total={audio_type_total}')
+    for genre_i in genre_list.keys():
+        print(f'{genre_i} {genre_sp_mu_dist[genre_i]}')
     if PARAMS['use_GPU']:
         reset_TF_session()
         
@@ -213,15 +229,15 @@ if __name__ == '__main__':
             gen_hist[1,genre_list[genre_i]] = genre_sp_mu_dist[genre_i][1]
             gen_hist[2,genre_list[genre_i]] = genre_sp_mu_dist[genre_i][2]
         print('gen_hist: ', np.shape(gen_hist), np.shape(np.sum(gen_hist, axis=1)))
-        # gen_hist = np.divide(gen_hist, np.repeat(np.array(np.sum(gen_hist, axis=0), ndmin=2), np.shape(gen_hist)[0], axis=0))
         gen_hist = np.divide(gen_hist, np.repeat(np.array(np.sum(gen_hist, axis=1), ndmin=2).T, np.shape(gen_hist)[1], axis=1))
         gen_hist = np.divide(gen_hist, np.repeat(np.array(np.max(gen_hist, axis=0), ndmin=2), np.shape(gen_hist)[0], axis=0))
+        print(f'gen_hist={gen_hist}')
 
         plt_count = 1
         for genre_i in genre_list.keys():
             plt.subplot(5,3,plt_count)
             plt.bar(['Music', 'Speech', 'Others'], gen_hist[:,genre_list[genre_i]], color='blue', width=0.8)
-            plt.ylim([0.5,np.max(gen_hist)])
+            plt.ylim([0.7,np.max(gen_hist)])
             plt.title(genre_i)
             plt_count += 1
         plt.show()
@@ -235,22 +251,21 @@ if __name__ == '__main__':
             aud_hist[1,genre_list[genre_i]] = genre_sp_mu_dist[genre_i][1]
             aud_hist[2,genre_list[genre_i]] = genre_sp_mu_dist[genre_i][2]
         aud_hist = np.divide(aud_hist, np.repeat(np.array(np.sum(aud_hist, axis=0), ndmin=2), np.shape(aud_hist)[0], axis=0))
-        # aud_hist = np.divide(aud_hist, np.repeat(np.array(np.sum(aud_hist, axis=1), ndmin=2).T, np.shape(aud_hist)[1], axis=1))
         aud_hist = np.divide(aud_hist, np.repeat(np.array(np.max(aud_hist, axis=1), ndmin=2).T, np.shape(aud_hist)[1], axis=1))
         
         plt.subplot(311)
         plt.bar(genre_sp_mu_dist.keys(), aud_hist[0,:], color='blue', width=0.4)
-        plt.ylim([0.5,np.max(aud_hist)])
+        plt.ylim([0.7,np.max(aud_hist)])
         plt.title('Music')
     
         plt.subplot(312)
         plt.bar(genre_sp_mu_dist.keys(), aud_hist[1,:], color='maroon', width=0.4)
-        plt.ylim([0.5,np.max(aud_hist)])
+        plt.ylim([0.7,np.max(aud_hist)])
         plt.title('Speech')
     
         plt.subplot(313)
         plt.bar(genre_sp_mu_dist.keys(), aud_hist[2,:], color='green', width=0.4)
-        plt.ylim([0.5,np.max(aud_hist)])
+        plt.ylim([0.7,np.max(aud_hist)])
         plt.title('Others')
         plt.show()
         plt.savefig(PARAMS['path']+'/Audio_Wise_thresh'+str(int(PARAMS['high_confidence_thresh']*100))+'.png', bbox_inches='tight')
